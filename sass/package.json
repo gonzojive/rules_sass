@@ -1,6 +1,6 @@
 {
   "devDependencies": {
     "@bazel/worker": "3.0.0",
-    "sass": "1.34.0"
+    "sass": "1.34.1"
   }
 }
