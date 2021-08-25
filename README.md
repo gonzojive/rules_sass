@@ -216,3 +216,38 @@ The following pair of files is generated for _each_ file in `srcs`.
 | `sourcemap`     | Whether to generate sourcemaps for the generated CSS. Defaults to True.       |
 
 [Output style]: http://sass-lang.com/documentation/file.SASS_REFERENCE.html#output_style
+
+### npm_sass_library
+
+```py
+npm_sass_library(name, deps=[])
+```
+
+Extracts direct and transitive Sass files from the given list of dependencies. Dependencies are expected to be
+external npm package targets. The extracted Sass files will be made available for consumption within `sass_binary`
+or `sass_library`.
+
+**Note**: If an external npm package exposes a `sass_libary` by itself, it is recommended to use this target instead.
+The author of an npm package can provide more fine-grained targets for Sass files, while `npm_sass_library` would
+make all Sass files, including files from transitive dependencies, available for consumption. This can result in
+unnecessary large build graphs slowing down compilation.
+
+| Attribute | Description                                                                         |
+|-----------|-------------------------------------------------------------------------------------|
+| `name`    | Unique name for this rule (required)                                                |
+| `deps`    | External npm package targets for which Sass files are collected (required)          |
+
+**Example:**
+
+```bzl
+npm_sass_library(
+  name = "angular_material_sass_deps",
+  deps = ["@npm//@angular/material"],
+)
+
+sass_binary(
+  name = "my_theme"
+  src = "my_theme.scss",
+  deps = [":angular_material_sass_deps"],
+)
+```
