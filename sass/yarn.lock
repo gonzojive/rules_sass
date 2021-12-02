@@ -201,13 +201,19 @@ readdirp@~3.5.0:
   dependencies:
     picomatch "^2.2.1"
 
-sass@1.45.0-rc.1:
-  version "1.45.0-rc.1"
-  resolved "https://registry.yarnpkg.com/sass/-/sass-1.45.0-rc.1.tgz#c78396bc0611b30ed320524a0a5959cb61f8ea74"
-  integrity sha512-8jDxST9s45+RbKO+xPDlTf2IJ6YuSRrNkVzMFU9sD29WS+0hzkAoa7viayr6ZnuP5j/IKEhT4az5ejZQ9WEIIw==
+sass@1.45.0-rc.2:
+  version "1.45.0-rc.2"
+  resolved "https://registry.yarnpkg.com/sass/-/sass-1.45.0-rc.2.tgz#f2a9e4239cac150b279d4e84f239fd6ab8b0f8c6"
+  integrity sha512-gDVYIIIGf5LKC/5NmLLEGqS6eBb5ZVWIHerHUwH4laZF0fwimBghaIU94ULVxE78oM73us0S+IAh18zL6qPsJg==
   dependencies:
     chokidar ">=3.0.0 <4.0.0"
     immutable "^4.0.0"
+    source-map-js ">=0.6.2 <2.0.0"
+
+"source-map-js@>=0.6.2 <2.0.0":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/source-map-js/-/source-map-js-1.0.1.tgz#a1741c131e3c77d048252adfa24e23b908670caf"
+  integrity sha512-4+TN2b3tqOCd/kaGRJ/sTYA0tR0mdXx26ipdolxcwtJVqEnqNYvlCAt1q3ypy4QMlYus+Zh34RNtYLoq2oQ4IA==
 
 to-regex-range@^5.0.1:
   version "5.0.1"
