@@ -201,10 +201,10 @@ readdirp@~3.5.0:
   dependencies:
     picomatch "^2.2.1"
 
-sass@1.49.3:
-  version "1.49.3"
-  resolved "https://registry.yarnpkg.com/sass/-/sass-1.49.3.tgz#2953c6bb16a968d0b40c225a8025b3a95d6bd188"
-  integrity sha512-scKgxiDgYDlkBpDeo6+Xn/MEAGbPgk4Gi80SgACG2Mr67KXVmNpqhV13/cpOa6bEijrIiNMp0pRGm5ZWsQEiNw==
+sass@1.49.4:
+  version "1.49.4"
+  resolved "https://registry.yarnpkg.com/sass/-/sass-1.49.4.tgz#d2655e03e52b2212ab65d392bdef6d0931d8637c"
+  integrity sha512-xUU5ZlppOjgfEyIIcHpnmY+f+3/ieaadp25S/OqZ5+jBPeTAMJJblkhM6UD9jb4j/lzglz7VOL5kglYt+CvNdQ==
   dependencies:
     chokidar ">=3.0.0 <4.0.0"
     immutable "^4.0.0"
