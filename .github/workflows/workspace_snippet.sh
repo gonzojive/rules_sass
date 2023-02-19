@@ -6,8 +6,8 @@ set -o errexit -o nounset -o pipefail
 # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
 TAG=${GITHUB_REF_NAME}
 # The prefix is chosen to match what GitHub generates for source archives
-PREFIX="rules_mylang-${TAG:1}"
-ARCHIVE="rules_mylang-$TAG.tar.gz"
+PREFIX="rules_sass-${TAG:1}"
+ARCHIVE="rules_sass-$TAG.tar.gz"
 git archive --format=tar --prefix=${PREFIX}/ ${TAG} | gzip > $ARCHIVE
 SHA=$(shasum -a 256 $ARCHIVE | awk '{print $1}')
 
@@ -16,10 +16,10 @@ WORKSPACE snippet:
 \`\`\`starlark
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 http_archive(
-    name = "com_myorg_rules_mylang",
+    name = "com_github_gonzojive_rules_sass",
     sha256 = "${SHA}",
     strip_prefix = "${PREFIX}",
-    url = "https://github.com/myorg/rules_mylang/releases/download/${TAG}/${ARCHIVE}",
+    url = "https://github.com/gonzojive/rules_sass/releases/download/${TAG}/${ARCHIVE}",
 )
 EOF
 
