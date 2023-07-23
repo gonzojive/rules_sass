@@ -1,0 +1,14 @@
+//@import 'examples/shared/fonts';
+//@import 'examples/shared/colors';
+
+html {
+  body {
+    //font-family: $default-font-stack;
+    font-family: "arial";
+
+    h1 {
+      color: "red";
+      font-family: "helvetica";
+    }
+  }
+}
