@@ -65,7 +65,6 @@ def _sass_library_impl(ctx):
         SassInfo(transitive_sources = transitive_sources),
         DefaultInfo(
             files = transitive_sources,
-            runfiles = ctx.runfiles(transitive_files = transitive_sources),
         ),
     ]
 

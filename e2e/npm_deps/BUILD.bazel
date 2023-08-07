@@ -5,6 +5,8 @@ Add a basic smoke-test target below.
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@com_github_gonzojive_rules_sass//sass:defs.bzl", "sass_binary")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@aspect_bazel_lib//lib:directory_path.bzl", "directory_path")
+load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
 
 # Replace with a usage of your rule/macro
 filegroup(name = "empty")
@@ -37,3 +39,18 @@ sass_binary(
 )
 
 npm_link_all_packages(name = "node_modules")
+
+directory_path(
+    # A unique name for this target.
+    name = "_index.scss_path",
+    # a TreeArtifact (ctx.actions.declare_directory)
+    directory = "//:node_modules/@angular/material/dir",
+    # path relative to the directory
+    path = "_index.scss",
+)
+
+copy_file(
+    name = "_index.scss",
+    src = "_index.scss_path",
+    out = "_index.scss",
+)
