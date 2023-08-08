@@ -3,7 +3,7 @@ Add a basic smoke-test target below.
 """
 
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@com_github_gonzojive_rules_sass//sass:defs.bzl", "sass_binary", "sass_library", "sass_load_path_dir")
+load("@com_github_gonzojive_rules_sass//sass:defs.bzl", "sass_binary", "sass_library", "sass_load_path")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@aspect_bazel_lib//lib:directory_path.bzl", "directory_path")
 load("@aspect_bazel_lib//lib:copy_file.bzl", "copy_file")
@@ -45,6 +45,7 @@ sass_binary(
     sourcemap_embed_sources = True,
     deps = [
         #":corners",
+        ":angular_material",
     ],
 )
 
@@ -53,10 +54,10 @@ sass_library(
     srcs = ["mylib.scss"],
 )
 
-sass_load_path_dir(
+sass_load_path(
     name = "angular_material",
-    src = "//:node_modules/@angular/material/dir",
-    import_path = "ang/mat",
+    directory = "//:node_modules/@angular/material/dir",
+    import_path = "@ang/mat",
 )
 
 npm_link_all_packages(name = "node_modules")

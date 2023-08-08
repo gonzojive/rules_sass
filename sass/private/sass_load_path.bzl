@@ -7,6 +7,7 @@ for a related design doc.
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
 load("//sass/private:pathutil.bzl", _relative_path = "relative_path")
+load("@bazel_skylib//lib:shell.bzl", "shell")
 
 SassLoadPathInfo = provider(
     doc = """An (import alias, directory label) pair for a sass dependency.
@@ -40,7 +41,7 @@ def _sass_load_path_impl(ctx):
     if not ctx.file.directory.is_directory:
         fail("directory attribute {} must be a directory".format(ctx.files.directory))
     load_path_info = SassLoadPathInfo(
-        directory = ctx.attr.directory,
+        directory = ctx.file.directory,
         import_path = ctx.attr.import_path,
     )
     return [load_path_info]
@@ -66,14 +67,13 @@ def _load_path_info_directory_path(load_path_info):
 
 def create_load_path_directory(
         ctx,
-        dir_path,
+        output_dir,
         load_path_infos):
     """Runs a program that creates the
 
     Args:
         ctx: The bazel ctx of a rule.
-        dir_path: (string) The output path of the directory to create and
-          populate.
+        output_dir: (File) The output directory to create and populate.
         load_path_infos: A sequence of SassLoadPathInfo structs that should
           be processed.
 
@@ -81,16 +81,43 @@ def create_load_path_directory(
         A list of paths to pass to sass's --load-path flag.
     """
     specs = create_load_path_directory_specs(
-        dir_path,
+        output_dir.path,
         load_path_infos,
     )
 
     all_commands = []
 
+    mkdirs = []
+    for spec in specs:
+        mkdirs.append(spec.load_path)
+        mkdirs.extend(spec.mkdirs)
+
+    if len(mkdirs) > 0:
+        all_commands.append("mkdir -p {}".format(_format_shell_args(mkdirs)))
+
+    for spec in specs:
+        for symlink in spec.symlinks:
+            all_commands.append("ln --symbolic {} {}".format(
+                shell.quote(symlink.target_path),
+                shell.quote(symlink.link_path),
+            ))
+
+    total_load_path_infos = 0
+    for spec in specs:
+        total_load_path_infos += len(spec.symlinks)
+
+    print("executing command {}".format(" && ".join(all_commands)))
+    ctx.actions.run_shell(
+        command = " && ".join(all_commands),
+        outputs = [output_dir],
+        progress_message = "Creating load path directory with {} entries".format(total_load_path_infos),
+    )
+    return [spec.load_path for spec in specs]
+
 def create_load_path_directory_specs(
         dir_path,
-        load_path_infos):  #        get_directory_path):
-    """Runs a program that creates the
+        load_path_infos):
+    """Generates a list of commands to create load-path directories.
 
     Args:
         dir_path: (string) The output path of the directory to create and
@@ -164,28 +191,35 @@ def create_load_path_directory_specs(
             return paths.join(dir_path, "load_path_{}".format(i))
         return dir_path
 
-    return [
-        struct(
-            load_path = _create_spec_load_path_dir(i),
-            mkdirs = sorted(spec.mkdirs.keys()),
-            symlinks = [
-                struct(
-                    link_path = paths.join(_create_spec_load_path_dir(i), load_path_info.import_path),
-                    target_path = _relative_path(
-                        get_directory_path(load_path_info),
-                        paths.dirname(
-                            paths.join(
-                                _create_spec_load_path_dir(i),
-                                load_path_info.import_path,
+    results = []
+    for (i, spec) in enumerate(create_specs):
+        load_path = _create_spec_load_path_dir(i)
+        results.append(
+            struct(
+                load_path = load_path,
+                mkdirs = [
+                    paths.join(load_path, dir)
+                    for dir in sorted(spec.mkdirs.keys())
+                ],
+                symlinks = [
+                    struct(
+                        link_path = paths.join(load_path, load_path_info.import_path),
+                        target_path = _relative_path(
+                            get_directory_path(load_path_info),
+                            paths.dirname(
+                                paths.join(
+                                    _create_spec_load_path_dir(i),
+                                    load_path_info.import_path,
+                                ),
                             ),
                         ),
-                    ),
-                )
-                for load_path_info in spec.load_path_infos
-            ],
+                    )
+                    for load_path_info in spec.load_path_infos
+                ],
+            ),
         )
-        for (i, spec) in enumerate(create_specs)
-    ]
+
+    return results
 
 def path_and_parent_paths(p):
     """Given "foo/bar/baz", returns ["foo", "foo/bar", "foo/bar/baz"].
@@ -219,3 +253,9 @@ def _split_path(p):
         p = dir
 
     return reversed(elems)
+
+def _format_shell_args(args):
+    return " ".join([
+        "{}".format(shell.quote(arg))
+        for arg in args
+    ])

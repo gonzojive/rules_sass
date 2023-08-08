@@ -1,6 +1,12 @@
-@use "./mylib" as corners;
+//@use "./mylib" as corners;
 
+@use "@ang/mat" as mat;
+
+@include mat.core();
+
+/*
 .button {
   @include corners.rounded;
   padding: 5px + corners.$radius;
 }
+*/

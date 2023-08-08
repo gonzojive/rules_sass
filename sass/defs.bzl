@@ -14,7 +14,7 @@
 "Compile Sass files to CSS"
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
-load("//sass/private:sass_load_path.bzl", _sass_load_path = "sass_load_path")
+load("//sass/private:sass_load_path.bzl", "SassLoadPathInfo", "create_load_path_directory", _sass_load_path = "sass_load_path")
 
 sass_load_path = _sass_load_path
 
@@ -42,110 +42,27 @@ SassInfo = provider(
     },
 )
 
-SassDirDepInfo = provider(
-    doc = "Information about a generated directory of files to be passed to sass.",
-    fields = {
-        "dir": "Sass sources for this target and its dependencies",
-    },
-)
-
-def _sass_load_path_dir_impl(ctx):
-    """sass_load_path_dir creates a directory 
-
-    It doesn't execute any actions.
-
-    Args:
-      ctx: The Bazel build context
-
-    Returns:
-      The sass_load_path_dir rule.
-    """
-
-    dir = ctx.file.src
-    if not dir.is_directory:
-        fail("src must be a directory, got {}".format(dir))
-
-    if ctx.attr.import_path:
-        output_dir = ctx.actions.declare_directory(ctx.label.name + ".output")
-
-        #symlink_to_dir = ctx.actions.declare_symlink(ctx.label.name + ".target_dir")
-        dir = output_dir
-
-        # Make all the directories except for the final one, which is what will
-        # be symliked.
-        dirs_to_make = paths.dirname(ctx.attr.import_path)
-
-        suffix = "/" + dirs_to_make if dirs_to_make else ""
-
-        ctx.actions.run_shell(
-            outputs = [output_dir],
-            inputs = [],
-            arguments = [output_dir.path + suffix],
-            command = """mkdir -p "$1" && exit 1""",
-            progress_message = "Making --load-path directory",
-        )
-        link_path = paths.join(output_dir.path, ctx.attr.import_path)
-        target_file = ctx.file.src
-
-        # print("want to link {} -> {} but don't know how".format(link_path, target_file.path))
-        # print(
-        #     "ln --symbolic {} {}".format(
-        #         _relative_path(target_file.path, paths.dirname(link_path)),
-        #         link_path,
-        #     ),
-        # )
-
-        # fail("blah")
-
-        # ctx.actions.run_shell(
-        #     outputs = [output_dir],
-        #     inputs = [],
-        #     arguments = [output_dir.path + suffix],
-        #     command = """ln --symbolic"$1" && exit 1""",
-        #     progress_message = "Symlinking target directory into directory tree.",
-        # )
-        # ctx.actions.symlink(
-        #     output = paths.join(output_dir.path, paths.basename(ctx.attr.import_path)),
-        #     target_file = ctx.file.src,
-        # )
-
-        # ctx.actions.symlink(
-
-        # )
-
+def _collect_load_path_infos(deps):
+    "Sass compilation requires all transitive .sass source files"
     return [
-        SassDirDepInfo(
-            dir = dir,
-        ),
-        DefaultInfo(
-            files = depset(direct = [dir]),
-        ),
+        dep[SassLoadPathInfo]
+        for dep in deps
+        if SassLoadPathInfo in dep
     ]
-
-sass_load_path_dir = rule(
-    implementation = _sass_load_path_dir_impl,
-    attrs = {
-        "src": attr.label(
-            doc = """File or directory that should be use-able from another
-            sass source.""",
-            #allow_files = True,
-            allow_single_file = True,
-            mandatory = True,
-        ),
-        "import_path": attr.string(
-            default = """If 'foo', and src='baz/x', use 'foo/x' can be used to
-            import the library""",
-            doc = "",
-        ),
-    },
-    doc = """Defines a group of Sass include files.""",
-)
 
 def _collect_transitive_sources(srcs, deps):
     "Sass compilation requires all transitive .sass source files"
     return depset(
         srcs,
-        transitive = [dep[SassInfo].transitive_sources for dep in deps],
+        transitive = [
+            dep[SassInfo].transitive_sources
+            for dep in deps
+            if SassInfo in dep
+        ] + [
+            depset([dep[SassLoadPathInfo].directory])
+            for dep in deps
+            if SassLoadPathInfo in dep
+        ],
         # Provide .sass sources from dependencies first
         order = "postorder",
     )
@@ -200,6 +117,14 @@ def _run_sass(ctx, input, css_output, map_output = None):
     #     for include_path in ctx.attr.include_paths:
     #         args.add("--load-path=%s/%s" % (prefix, include_path))
 
+    load_path_infos = _collect_load_path_infos(ctx.attr.deps)
+    load_path_inputs = []
+    if len(load_path_infos) > 0:
+        output_dir = ctx.actions.declare_directory(ctx.label.name + ".load_path_dirs")
+        for load_path in create_load_path_directory(ctx, output_dir, load_path_infos):
+            args.add_all(["--load-path", load_path])
+        load_path_inputs += [output_dir]
+
     # Last arguments are input and output paths
     # Note that the sourcemap is implicitly written to a path the same as the
     # css with the added .map extension.
@@ -213,7 +138,10 @@ def _run_sass(ctx, input, css_output, map_output = None):
     ctx.actions.run(
         mnemonic = "SassCompiler",
         executable = toolchain_info.target_tool_path,
-        inputs = _collect_transitive_sources([input], ctx.attr.deps),
+        inputs = depset(
+            load_path_inputs,
+            transitive = [_collect_transitive_sources([input], ctx.attr.deps)],
+        ),
         tools = toolchain_info.tool_files,
         arguments = [args],
         outputs = [css_output, map_output] if map_output else [css_output],
@@ -268,7 +196,10 @@ def _strip_extension(path):
 
 sass_deps_attr = attr.label_list(
     doc = "sass_library targets to include in the compilation",
-    providers = [SassInfo],
+    providers = [
+        [SassInfo],
+        [SassLoadPathInfo],
+    ],
     allow_files = False,
 )
 

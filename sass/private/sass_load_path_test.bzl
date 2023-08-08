@@ -23,7 +23,7 @@ def _create_load_path_directory_specs_test_impl(ctx):
         [
             struct(
                 load_path = "output_place",
-                mkdirs = ["@angular"],
+                mkdirs = ["output_place/@angular"],
                 symlinks = [
                     struct(
                         link_path = "output_place/@angular/material",
@@ -51,9 +51,9 @@ def _create_load_path_directory_specs_test_impl(ctx):
             struct(
                 load_path = "output_place",
                 mkdirs = [
-                    "@angular",
-                    "some",
-                    "some/extra",
+                    "output_place/@angular",
+                    "output_place/some",
+                    "output_place/some/extra",
                 ],
                 symlinks = [
                     struct(
@@ -103,7 +103,7 @@ def _create_load_path_directory_specs_test_impl(ctx):
             struct(
                 load_path = "output_place/load_path_1",
                 mkdirs = [
-                    "@angular",
+                    "output_place/load_path_1/@angular",
                 ],
                 symlinks = [
                     struct(

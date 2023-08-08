@@ -19,4 +19,6 @@ bzl_library(
     visibility = ["//sass:__subpackages__"],
 )
 
-create_load_path_directory_test_suite(name = "create_load_path_directory_tests")
+create_load_path_directory_test_suite(
+    name = "create_load_path_directory_tests",
+)
