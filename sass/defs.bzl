@@ -13,6 +13,8 @@
 # limitations under the License.
 "Compile Sass files to CSS"
 
+load("@bazel_skylib//lib:paths.bzl", "paths")
+
 _ALLOWED_SRC_FILE_EXTENSIONS = [".sass", ".scss", ".css", ".svg", ".png", ".gif", ".cur", ".jpg", ".webp"]
 
 # Documentation for switching which compiler is used
@@ -35,6 +37,104 @@ SassInfo = provider(
     fields = {
         "transitive_sources": "Sass sources for this target and its dependencies",
     },
+)
+
+SassDirDepInfo = provider(
+    doc = "Information about a generated directory of files to be passed to sass.",
+    fields = {
+        "dir": "Sass sources for this target and its dependencies",
+    },
+)
+
+def _sass_load_path_dir_impl(ctx):
+    """sass_load_path_dir creates a directory 
+
+    It doesn't execute any actions.
+
+    Args:
+      ctx: The Bazel build context
+
+    Returns:
+      The sass_load_path_dir rule.
+    """
+
+    dir = ctx.file.src
+    if not dir.is_directory:
+        fail("src must be a directory, got {}".format(dir))
+
+    if ctx.attr.import_path:
+        output_dir = ctx.actions.declare_directory(ctx.label.name + ".output")
+        output_dir_symlink = ctx.actions.declare_symlink(ctx.label.name + ".output_symlink")
+        dir = output_dir
+
+        # Make all the directories except for the final one, which is what will
+        # be symliked.
+        dirs_to_make = paths.dirname(ctx.attr.import_path)
+
+        suffix = "/" + dirs_to_make if dirs_to_make else ""
+
+        ctx.actions.run_shell(
+            outputs = [output_dir],
+            inputs = [],
+            arguments = [output_dir.path + suffix],
+            command = """mkdir -p "$1" && exit 1""",
+            progress_message = "Making --load-path directory",
+        )
+        link_path = paths.join(output_dir.path, ctx.attr.import_path)
+        target_file = ctx.file.src
+
+        # print("want to link {} -> {} but don't know how".format(link_path, target_file.path))
+        # print(
+        #     "ln --symbolic {} {}".format(
+        #         _relative_path(target_file.path, paths.dirname(link_path)),
+        #         link_path,
+        #     ),
+        # )
+
+        # fail("blah")
+
+        # ctx.actions.run_shell(
+        #     outputs = [output_dir],
+        #     inputs = [],
+        #     arguments = [output_dir.path + suffix],
+        #     command = """ln --symbolic"$1" && exit 1""",
+        #     progress_message = "Symlinking target directory into directory tree.",
+        # )
+        ctx.actions.symlink(
+            output = paths.join(output_dir.path, paths.basename(ctx.attr.import_path)),
+            target_file = ctx.file.src,
+        )
+
+        # ctx.actions.symlink(
+
+        # )
+
+    return [
+        SassDirDepInfo(
+            dir = dir,
+        ),
+        DefaultInfo(
+            files = depset(direct = [dir]),
+        ),
+    ]
+
+sass_load_path_dir = rule(
+    implementation = _sass_load_path_dir_impl,
+    attrs = {
+        "src": attr.label(
+            doc = """File or directory that should be use-able from another
+            sass source.""",
+            #allow_files = True,
+            allow_single_file = True,
+            mandatory = True,
+        ),
+        "import_path": attr.string(
+            default = """If 'foo', and src='baz/x', use 'foo/x' can be used to
+            import the library""",
+            doc = "",
+        ),
+    },
+    doc = """Defines a group of Sass include files.""",
 )
 
 def _collect_transitive_sources(srcs, deps):
@@ -91,10 +191,10 @@ def _run_sass(ctx, input, css_output, map_output = None):
         args.add("--embed-sources")
 
     # Sources for compilation may exist in the source tree, in bazel-bin, or bazel-genfiles.
-    for prefix in [".", ctx.var["BINDIR"], ctx.var["GENDIR"]]:
-        args.add("--load-path=%s/" % prefix)
-        for include_path in ctx.attr.include_paths:
-            args.add("--load-path=%s/%s" % (prefix, include_path))
+    # for prefix in [".", ctx.var["BINDIR"], ctx.var["GENDIR"]]:
+    #     args.add("--load-path=%s/" % prefix)
+    #     for include_path in ctx.attr.include_paths:
+    #         args.add("--load-path=%s/%s" % (prefix, include_path))
 
     # Last arguments are input and output paths
     # Note that the sourcemap is implicitly written to a path the same as the
@@ -329,3 +429,41 @@ sass_binary = rule(
 #         ),
 #     },
 # )
+
+# From skylib pull request.
+# https://github.com/bazelbuild/bazel-skylib/pull/44/files
+def _relative_path(target, start):
+    """Returns a relative path to `target` from `start`.
+
+    Args:
+      target: path that we want to get relative path to (file or directory).
+      start: path to directory from which we are starting.
+
+    Returns:
+      string: relative path to `target`.
+    """
+
+    def remove_end_slash(x):
+        if x.endswith("/"):
+            return x.removesuffix("/")
+        return x
+
+    t_pieces = remove_end_slash(target).split("/")
+    s_pieces = remove_end_slash(start).split("/")
+    common_part_len = 0
+
+    for tp, rp in zip(t_pieces, s_pieces):
+        if tp == rp:
+            common_part_len += 1
+        else:
+            break
+
+    # If start ends in slash,
+
+    result = [".."] * (len(s_pieces) - common_part_len)
+    result += t_pieces[common_part_len:]
+    if result[0] != ".." and result[0] != ".":
+        result = ["."] + result
+
+    result = "/".join(result) if len(result) > 0 else "."
+    return result

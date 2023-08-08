@@ -1,0 +1,6 @@
+@use "./mylib" as corners;
+
+.button {
+  @include corners.rounded;
+  padding: 5px + corners.$radius;
+}
