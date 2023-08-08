@@ -14,6 +14,9 @@
 "Compile Sass files to CSS"
 
 load("@bazel_skylib//lib:paths.bzl", "paths")
+load("//sass/private:sass_load_path.bzl", _sass_load_path = "sass_load_path")
+
+sass_load_path = _sass_load_path
 
 _ALLOWED_SRC_FILE_EXTENSIONS = [".sass", ".scss", ".css", ".svg", ".png", ".gif", ".cur", ".jpg", ".webp"]
 
@@ -64,7 +67,8 @@ def _sass_load_path_dir_impl(ctx):
 
     if ctx.attr.import_path:
         output_dir = ctx.actions.declare_directory(ctx.label.name + ".output")
-        output_dir_symlink = ctx.actions.declare_symlink(ctx.label.name + ".output_symlink")
+
+        #symlink_to_dir = ctx.actions.declare_symlink(ctx.label.name + ".target_dir")
         dir = output_dir
 
         # Make all the directories except for the final one, which is what will
@@ -100,10 +104,10 @@ def _sass_load_path_dir_impl(ctx):
         #     command = """ln --symbolic"$1" && exit 1""",
         #     progress_message = "Symlinking target directory into directory tree.",
         # )
-        ctx.actions.symlink(
-            output = paths.join(output_dir.path, paths.basename(ctx.attr.import_path)),
-            target_file = ctx.file.src,
-        )
+        # ctx.actions.symlink(
+        #     output = paths.join(output_dir.path, paths.basename(ctx.attr.import_path)),
+        #     target_file = ctx.file.src,
+        # )
 
         # ctx.actions.symlink(
 
